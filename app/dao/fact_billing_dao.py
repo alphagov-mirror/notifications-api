@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
 
 from flask import current_app
 from notifications_utils.timezones import convert_bst_to_utc, convert_utc_to_bst
@@ -34,7 +34,7 @@ from app.utils import get_london_midnight_in_utc
 def fetch_sms_free_allowance_remainder(start_date):
     # ASSUMPTION: AnnualBilling has been populated for year.
     billing_year = get_financial_year_for_datetime(start_date)
-    start_of_year = convert_utc_to_bst(financial_year_start(billing_year))
+    start_of_year = date(billing_year, 4, 1)
 
     billable_units = func.coalesce(func.sum(FactBilling.billable_units * FactBilling.rate_multiplier), 0)
 
