@@ -49,6 +49,22 @@ def get_letter_pdf_filename(reference, crown, is_scan_letter=False, postage=SECO
     return upload_file_name
 
 
+def get_letter_pdf_filename_for_uploaded_PDF(reference, crown, postage=SECOND_CLASS):
+    now = datetime.utcnow()
+
+    upload_file_name = LETTERS_PDF_FILE_LOCATION_STRUCTURE.format(
+        folder=get_folder_name(now, is_test_or_scan_letter=False),
+        reference=reference,
+        duplex="D",
+        letter_class=RESOLVE_POSTAGE_FOR_FILE_NAME[postage],
+        colour="C",
+        crown="C" if crown else "N",
+        date=now.strftime('%Y%m%d%H%M%S')
+    ).upper()
+
+    return upload_file_name
+
+
 def get_bucket_name_and_prefix_for_notification(notification):
     is_test_letter = notification.key_type == KEY_TYPE_TEST and notification.template.is_precompiled_letter
     folder = ''

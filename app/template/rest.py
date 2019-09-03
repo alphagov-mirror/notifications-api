@@ -37,6 +37,7 @@ from app.schema_validation import validate
 from app.schemas import (template_schema, template_history_schema)
 from app.template.template_schemas import post_create_template_schema
 from app.utils import get_template_instance, get_public_notify_type_text
+from app.v2.notifications.post_notifications import get_precompiled_letter_template
 
 template_blueprint = Blueprint('template', __name__, url_prefix='/service/<uuid:service_id>/template')
 
@@ -136,6 +137,14 @@ def update_template(service_id, template_id):
 
     dao_update_template(update_dict)
     return jsonify(data=template_schema.dump(update_dict).data), 200
+
+
+@template_blueprint.route('/precompiled', methods=['GET'])
+def get_precompiled_template_for_service(service_id):
+    template = get_precompiled_letter_template(service_id)
+    template_dict = template_schema.dump(template).data
+
+    return jsonify(template_dict), 200
 
 
 @template_blueprint.route('', methods=['GET'])

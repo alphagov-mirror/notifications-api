@@ -344,6 +344,7 @@ def get_reply_to_text(notification_type, form, template):
     return reply_to
 
 
+# Move to a different file
 def get_precompiled_letter_template(service_id):
     template = Template.query.filter_by(
         service_id=service_id,
