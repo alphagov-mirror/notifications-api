@@ -42,6 +42,9 @@ from app.dao.notifications_dao import (
     update_notification_status_by_reference,
     dao_get_notification_history_by_reference,
 )
+from app.notifications.validators import validate_template
+from app.v2.errors import BadRequestError
+
 from app.dao.provider_details_dao import get_current_provider
 from app.dao.service_email_reply_to_dao import dao_get_reply_to_by_id
 from app.dao.service_inbound_api_dao import get_service_inbound_api_for_service
@@ -198,6 +201,15 @@ def save_sms(self,
     service = dao_fetch_service_by_id(service_id)
     template = dao_get_template_by_id(notification['template'], version=notification['template_version'])
 
+    personalisation = notification.get('personalisation')
+    try:
+        validate_template(template.id, personalisation, service, template.template_type)
+    except BadRequestError as e:
+        current_app.logger.debug(
+            "SMS {} failed: {}".format(notification_id, e.message)
+        )
+        return
+
     if sender_id:
         reply_to_text = dao_get_service_sms_senders_by_id(service_id, sender_id).sms_sender
     else:
@@ -215,7 +227,7 @@ def save_sms(self,
             template_version=notification['template_version'],
             recipient=notification['to'],
             service=service,
-            personalisation=notification.get('personalisation'),
+            personalisation=personalisation,
             notification_type=SMS_TYPE,
             api_key_id=None,
             key_type=KEY_TYPE_NORMAL,
@@ -253,6 +265,15 @@ def save_email(self,
 
     service = dao_fetch_service_by_id(service_id)
     template = dao_get_template_by_id(notification['template'], version=notification['template_version'])
+
+    personalisation = notification.get('personalisation')
+    try:
+        validate_template(template.id, personalisation, service, template.template_type)
+    except BadRequestError as e:
+        current_app.logger.debug(
+            "SMS {} failed: {}".format(notification_id, e.message)
+        )
+        return
 
     if sender_id:
         reply_to_text = dao_get_reply_to_by_id(service_id, sender_id).email_address
@@ -305,6 +326,15 @@ def save_letter(
 
     service = dao_fetch_service_by_id(service_id)
     template = dao_get_template_by_id(notification['template'], version=notification['template_version'])
+
+    personalisation = notification.get('personalisation')
+    try:
+        validate_template(template.id, personalisation, service, template.template_type)
+    except BadRequestError as e:
+        current_app.logger.debug(
+            "SMS {} failed: {}".format(notification_id, e.message)
+        )
+        return
 
     try:
         # if we don't want to actually send the letter, then start it off in SENDING so we don't pick it up
