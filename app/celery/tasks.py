@@ -67,6 +67,7 @@ from app.models import (
     NOTIFICATION_TEMPORARY_FAILURE,
     NOTIFICATION_TECHNICAL_FAILURE,
     NOTIFICATION_RETURNED_LETTER,
+    NOTIFICATION_VALIDATION_FAILED,
     SMS_TYPE,
     DailySortedLetter,
 )
@@ -201,14 +202,16 @@ def save_sms(self,
     service = dao_fetch_service_by_id(service_id)
     template = dao_get_template_by_id(notification['template'], version=notification['template_version'])
 
+    status = NOTIFICATION_CREATED
+
     personalisation = notification.get('personalisation')
     try:
         validate_template(template.id, personalisation, service, template.template_type)
     except BadRequestError as e:
         current_app.logger.debug(
-            "SMS {} failed: {}".format(notification_id, e.message)
+            "SMS {} failed validation: {}".format(notification_id, e.message)
         )
-        return
+        status = NOTIFICATION_VALIDATION_FAILED
 
     if sender_id:
         reply_to_text = dao_get_service_sms_senders_by_id(service_id, sender_id).sms_sender
@@ -235,13 +238,15 @@ def save_sms(self,
             job_id=notification.get('job', None),
             job_row_number=notification.get('row_number', None),
             notification_id=notification_id,
-            reply_to_text=reply_to_text
+            reply_to_text=reply_to_text,
+            status=status
         )
 
-        provider_tasks.deliver_sms.apply_async(
-            [str(saved_notification.id)],
-            queue=QueueNames.SEND_SMS if not service.research_mode else QueueNames.RESEARCH_MODE
-        )
+        if status == NOTIFICATION_CREATED:
+            provider_tasks.deliver_sms.apply_async(
+                [str(saved_notification.id)],
+                queue=QueueNames.SEND_SMS if not service.research_mode else QueueNames.RESEARCH_MODE
+            )
 
         current_app.logger.debug(
             "SMS {} created at {} for job {}".format(
@@ -266,14 +271,16 @@ def save_email(self,
     service = dao_fetch_service_by_id(service_id)
     template = dao_get_template_by_id(notification['template'], version=notification['template_version'])
 
+    status = NOTIFICATION_CREATED
+
     personalisation = notification.get('personalisation')
     try:
         validate_template(template.id, personalisation, service, template.template_type)
     except BadRequestError as e:
         current_app.logger.debug(
-            "SMS {} failed: {}".format(notification_id, e.message)
+            "Email {} failed validation: {}".format(notification_id, e.message)
         )
-        return
+        status = NOTIFICATION_VALIDATION_FAILED
 
     if sender_id:
         reply_to_text = dao_get_reply_to_by_id(service_id, sender_id).email_address
@@ -298,13 +305,15 @@ def save_email(self,
             job_id=notification.get('job', None),
             job_row_number=notification.get('row_number', None),
             notification_id=notification_id,
-            reply_to_text=reply_to_text
+            reply_to_text=reply_to_text,
+            status=status
         )
 
-        provider_tasks.deliver_email.apply_async(
-            [str(saved_notification.id)],
-            queue=QueueNames.SEND_EMAIL if not service.research_mode else QueueNames.RESEARCH_MODE
-        )
+        if status == NOTIFICATION_CREATED:
+            provider_tasks.deliver_email.apply_async(
+                [str(saved_notification.id)],
+                queue=QueueNames.SEND_EMAIL if not service.research_mode else QueueNames.RESEARCH_MODE
+            )
 
         current_app.logger.debug("Email {} created at {}".format(saved_notification.id, saved_notification.created_at))
     except SQLAlchemyError as e:
@@ -327,18 +336,19 @@ def save_letter(
     service = dao_fetch_service_by_id(service_id)
     template = dao_get_template_by_id(notification['template'], version=notification['template_version'])
 
+    # if we don't want to actually send the letter, then start it off in SENDING so we don't pick it up
+    status = NOTIFICATION_CREATED if not service.research_mode else NOTIFICATION_SENDING
+
     personalisation = notification.get('personalisation')
     try:
         validate_template(template.id, personalisation, service, template.template_type)
     except BadRequestError as e:
         current_app.logger.debug(
-            "SMS {} failed: {}".format(notification_id, e.message)
+            "Letter {} failed validation: {}".format(notification_id, e.message)
         )
-        return
+        status = NOTIFICATION_VALIDATION_FAILED
 
     try:
-        # if we don't want to actually send the letter, then start it off in SENDING so we don't pick it up
-        status = NOTIFICATION_CREATED if not service.research_mode else NOTIFICATION_SENDING
 
         saved_notification = persist_notification(
             template_id=notification['template'],
@@ -359,7 +369,8 @@ def save_letter(
             status=status
         )
 
-        if not service.research_mode:
+        # not sure how to handle this one yet: should we create letter pdf if content is empty?
+        if not service.research_mode and not status == NOTIFICATION_VALIDATION_FAILED:
             letters_pdf_tasks.create_letters_pdf.apply_async(
                 [str(saved_notification.id)],
                 queue=QueueNames.CREATE_LETTERS_PDF

@@ -6,7 +6,7 @@ from notifications_utils import SMS_CHAR_COUNT_LIMIT
 import app
 from app.models import SMS_TYPE, EMAIL_TYPE, LETTER_TYPE
 from app.notifications.validators import (
-    check_if_notification_has_any_content,
+    check_if_notification_content_is_not_empty,
     check_service_over_daily_message_limit,
     check_template_is_for_notification_type,
     check_template_is_active,
@@ -287,13 +287,15 @@ def test_check_sms_content_char_count_fails(char_count, notify_api):
     assert e.value.fields == []
 
 
-def test_check_if_notification_has_any_content_passes(notify_api):
-    assert check_if_notification_has_any_content(30) is None
+def test_check_if_notification_content_is_not_empty_passes(notify_api):
+    # how do I test this now?
+    assert check_if_notification_content_is_not_empty(30) is None
 
 
-def test_check_if_notification_has_any_content_fails(notify_api):
+def test_check_if_notification_content_is_not_empty_fails(notify_api):
+    # how do I test this now?
     with pytest.raises(BadRequestError) as e:
-        check_if_notification_has_any_content(0)
+        check_if_notification_content_is_not_empty(0)
     assert e.value.status_code == 400
     assert e.value.message == 'This message is empty.'
     assert e.value.fields == []

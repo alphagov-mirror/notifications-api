@@ -36,6 +36,7 @@ from app.dao import jobs_dao, service_email_reply_to_dao, service_sms_sender_dao
 from app.models import (
     Job,
     Notification,
+    NOTIFICATION_VALIDATION_FAILED,
     NotificationHistory,
     EMAIL_TYPE,
     KEY_TYPE_NORMAL,
@@ -377,7 +378,9 @@ def test_should_process_all_sms_job(sample_job_with_placeholdered_template,
     (LETTER_TYPE, False, 'save_letter', 'database-tasks'),
     (LETTER_TYPE, True, 'save_letter', 'research-mode-tasks'),
 ])
-def test_process_row_sends_letter_task(template_type, research_mode, expected_function, expected_queue, mocker):
+def test_process_row_encrypts_and_saves_message(
+    template_type, research_mode, expected_function, expected_queue, mocker
+):
     mocker.patch('app.celery.tasks.create_uuid', return_value='noti_uuid')
     task_mock = mocker.patch('app.celery.tasks.{}.apply_async'.format(expected_function))
     encrypt_mock = mocker.patch('app.celery.tasks.encryption.encrypt')
@@ -561,7 +564,7 @@ def test_save_email_should_save_default_email_reply_to_text_on_notification(noti
     assert persisted_notification.reply_to_text == 'reply_to@digital.gov.uk'
 
 
-def test_save_sms_should_save_default_smm_sender_notification_reply_to_text_on(notify_db_session, mocker):
+def test_save_sms_should_save_default_sms_sender_notification_reply_to_text_on(notify_db_session, mocker):
     service = create_service_with_defined_sms_sender(sms_sender_value='12345')
     template = create_template(service=service)
 
@@ -611,6 +614,44 @@ def test_should_not_save_email_if_restricted_service_and_invalid_email_address(n
     )
 
     assert Notification.query.count() == 0
+
+
+def test_should_not_send_sms_if_content_is_empty(notify_db_session, mocker):
+    user = create_user(mobile_number="07700 900205")
+    service = create_service(user=user, restricted=False)
+    template = create_template(service=service, content="")
+
+    notification = _notification_json(template, to="07700 900849")
+    mocker.patch('app.celery.provider_tasks.deliver_sms.apply_async')
+
+    notification_id = uuid.uuid4()
+    save_sms(
+        service.id,
+        notification_id,
+        encryption.encrypt(notification),
+    )
+    assert provider_tasks.deliver_sms.apply_async.called is False
+    assert Notification.query.count() == 1
+    assert Notification.query.one().status == NOTIFICATION_VALIDATION_FAILED
+
+
+def test_should_not_save_email_if_content_is_empty(notify_db_session, mocker):
+    user = create_user()
+    service = create_service(user=user, restricted=False)
+    template = create_template(service=service, template_type='email', subject='', content='')
+    notification = _notification_json(template, to="test@example.com")
+    mocker.patch('app.celery.provider_tasks.deliver_email.apply_async')
+
+    notification_id = uuid.uuid4()
+    save_email(
+        service.id,
+        notification_id,
+        encryption.encrypt(notification),
+    )
+
+    assert provider_tasks.deliver_email.apply_async.called is False
+    assert Notification.query.count() == 1
+    assert Notification.query.one().status == NOTIFICATION_VALIDATION_FAILED
 
 
 def test_should_put_save_email_task_in_research_mode_queue_if_research_mode_service(
