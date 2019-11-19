@@ -122,7 +122,7 @@ def check_sms_content_char_count(content_count):
 
 
 def check_if_notification_content_is_not_empty(template_with_content):
-    if len(template_with_content.__str__()) == 0:
+    if template_with_content.content_count == 0:
         message = 'This message is empty.'
         raise BadRequestError(message=message)
 
