@@ -21,13 +21,16 @@ def format_statistics(statistics):
     return counts
 
 
-def get_rate_of_permanent_failures_for_service(statistics):
-    counts = create_zeroed_stats_dicts()
+def get_rate_of_permanent_failures_for_service(statistics, threshold=100):
+    counts = {"permanent_failure": 0, "all_other_statuses": 0}
     for row in statistics:
         if row.notification_type == 'sms':
-            _update_statuses_from_row(counts, row)
+            _count_if_status_is_permanent_failure_from_row(counts, row)
 
-    rate = counts['permanent_failure'] / (counts['permanent_failure'] + counts['all_other_statuses'])
+    if counts['permanent_failure'] + counts['all_other_statuses'] >= threshold:
+        rate = counts['permanent_failure'] / (counts['permanent_failure'] + counts['all_other_statuses'])
+    else:
+        rate = 0
     return rate
 
 

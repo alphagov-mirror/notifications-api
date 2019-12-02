@@ -271,7 +271,7 @@ def check_for_services_with_high_failure_rates_or_sending_to_tv_numbers():
 
         if current_app.config['NOTIFY_ENVIRONMENT'] in ['live', 'production', 'test']:
             zendesk_client.create_ticket(
-                subject="[{}] High failure sms rates spotted for services".format(
+                subject="[{}] High failure rates for sms spotted for services".format(
                     current_app.config['NOTIFY_ENVIRONMENT']
                 ),
                 message=message,

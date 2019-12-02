@@ -59,9 +59,9 @@ def service_allowed_to_send_to(recipient, service, key_type, allow_whitelisted_r
         )
 
 
-def get_services_with_high_failure_rates(rate=0.25):
-    start_date = datetime.utcnow() - timedelta(days=1)
-    end_date = datetime.utcnow()
+def get_services_with_high_failure_rates(rate=0.25, threshold=100):
+    start_date = (datetime.utcnow() - timedelta(days=1)).date()
+    end_date = datetime.utcnow().date()
 
     stats = fetch_stats_for_all_services_by_date_range(
         start_date=start_date,
@@ -72,7 +72,7 @@ def get_services_with_high_failure_rates(rate=0.25):
     for service_id, rows in itertools.groupby(stats, lambda x: x.service_id):
         rows = list(rows)
         if not rows[0].restricted and not rows[0].research_mode and rows[0].active:
-            permanent_failure_rate = statistics.get_rate_of_permanent_failures_for_service(rows)
+            permanent_failure_rate = statistics.get_rate_of_permanent_failures_for_service(rows, threshold=threshold)
             if permanent_failure_rate >= rate:
                 results.append({
                     'id': str(rows[0].service_id),
