@@ -24,7 +24,6 @@ def format_statistics(statistics):
 def get_rate_of_permanent_failures_for_service(statistics, threshold=100):
     counts = {"permanent_failure": 0, "all_other_statuses": 0}
     for row in statistics:
-
         _count_if_status_is_permanent_failure_from_row(counts, row)
 
     if counts['permanent_failure'] + counts['all_other_statuses'] >= threshold:

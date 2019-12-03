@@ -71,7 +71,6 @@ def get_services_with_high_failure_rates(start_date, end_date, rate=0.25, thresh
         if permanent_failure_rate >= rate:
             results.append({
                 'id': str(rows[0].service_id),
-                'name': rows[0].service_name,
                 'permanent_failure_rate': permanent_failure_rate
             })
     return results
