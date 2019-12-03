@@ -40,8 +40,8 @@ def test_get_services_with_high_failure_rates(notify_db_session):
     service_2 = create_service(service_name="Service 2")  # below threshold
     template_2 = create_template(service_2)
     create_notification(template_2, status="permanent-failure")
-    start_date = (datetime.utcnow() - timedelta(days=1)).date()
-    end_date = datetime.utcnow().date()
+    start_date = (datetime.utcnow() - timedelta(days=1))
+    end_date = datetime.utcnow()
 
     assert get_services_with_high_failure_rates(start_date, end_date, threshold=3) == [{
         'id': str(service_1.id),

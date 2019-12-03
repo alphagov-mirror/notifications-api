@@ -5,7 +5,6 @@ import pytest
 import mock
 
 from app.dao.fact_notification_status_dao import (
-    dao_find_services_sending_to_tv_numbers,
     update_fact_notification_status,
     fetch_monthly_notification_statuses_per_service,
     fetch_notification_status_for_day,
@@ -16,7 +15,6 @@ from app.dao.fact_notification_status_dao import (
     fetch_notification_statuses_for_job,
     fetch_stats_for_all_services_by_date_range, fetch_monthly_template_usage_for_service,
     get_total_sent_notifications_for_day_and_type,
-    dao_find_services_sending_to_tv_numbers
 )
 from app.models import (
     FactNotificationStatus,
@@ -442,36 +440,6 @@ def test_fetch_stats_for_all_services_by_date_range(notify_db_session):
     assert not results[4].notification_type
     assert not results[4].status
     assert not results[4].count
-
-
-@freeze_time("2019-12-02 12:00:00.000000")
-def test_dao_find_services_sending_to_tv_numbers(notify_db_session):
-    service_1 = create_service(service_name="Service 1")
-    service_3 = create_service(service_name="Service 3", restricted=True)  # restricted
-    service_4 = create_service(service_name="Service 4", research_mode=True)  # research mode
-    service_5 = create_service(service_name="Service 5", active=False)  # not active
-    services = [service_1, service_3, service_4, service_5]
-    for service in services:
-        template = create_template(service)
-        for x in range(0, 5):
-            create_notification(template, to_field="07700900001", status="permanent-failure")
-
-    service_6 = create_service(service_name="Service 6")  # notifications too old
-    with freeze_time("2019-11-30 15:00:00.000000"):
-        template_6 = create_template(service_6)
-        for x in range(0, 5):
-            create_notification(template_6, to_field="07700900001", status="permanent-failure")
-
-    service_2 = create_service(service_name="Service 2")  # below threshold
-    template_2 = create_template(service_2)
-    create_notification(template_2, to_field="07700900001", status="permanent-failure")
-    for x in range(0, 5):
-        create_notification(template_2, to_field="07711900001", status="delivered")
-
-    start_date = (datetime.utcnow() - timedelta(days=1)).date()
-    end_date = datetime.utcnow().date()
-
-    assert dao_find_services_sending_to_tv_numbers(start_date, end_date, threshold=4) == []
 
 
 @freeze_time('2018-03-30 14:00')
