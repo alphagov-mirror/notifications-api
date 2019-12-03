@@ -512,8 +512,10 @@ def test_check_for_services_with_high_failure_rates_or_sending_to_tv_numbers(
     mock_failure_rates = mocker.patch(
         'app.celery.scheduled_tasks.get_services_with_high_failure_rates', return_value=failure_rates
     )
+    start_date = (datetime.utcnow() - timedelta(days=1)).date()
+    end_date = datetime.utcnow().date()
 
-    check_for_services_with_high_failure_rates_or_sending_to_tv_numbers()
+    check_for_services_with_high_failure_rates_or_sending_to_tv_numbers(start_date, end_date)
 
     assert mock_failure_rates.called
     mock_logger.assert_called_once_with(expected_message)

@@ -355,6 +355,67 @@ def fetch_stats_for_all_services_by_date_range(start_date, end_date, include_fro
     return query.all()
 
 
+def dao_find_services_sending_to_tv_numbers(start_date, end_date, threshold=100):
+
+    subquery = db.session.query(
+        Notification.notification_type,
+        Notification.status.label('status'),
+        Notification.to.label('recipient'),
+        Notification.service_id.label('service_id'),
+        func.count(Notification.id).label('count')
+    ).filter(
+        Notification.created_at >= start_date,
+        Notification.created_at <= end_date,
+        Notification.key_type != KEY_TYPE_TEST,
+        Notification.notification_type == SMS_TYPE,
+        Notification.to.like("%7700900%"),
+    ).group_by(
+        Notification.notification_type,
+        Notification.status,
+        Notification.service_id
+    )
+    subquery = subquery.subquery()
+
+    all_stats_table = db.session.query(
+        Service.id.label('service_id'),
+        Service.name.label('name'),
+        Service.restricted.label('restricted'),
+        Service.research_mode.label('research_mode'),
+        Service.active.label('active'),
+        subquery.c.notification_type.label('notification_type'),
+        subquery.c.status.label('status'),
+        subquery.c.count.label('count')
+    ).outerjoin(
+        subquery,
+        subquery.c.service_id == Service.id
+    )
+
+    query = db.session.query(
+        all_stats_table.c.service_id,
+        all_stats_table.c.name,
+        all_stats_table.c.restricted,
+        all_stats_table.c.research_mode,
+        all_stats_table.c.active,
+        all_stats_table.c.notification_type,
+        all_stats_table.c.status,
+        func.cast(func.sum(all_stats_table.c.count), Integer).label('count'),
+    ).filter(
+        all_stats_table.c.restricted is False,
+        all_stats_table.c.research_mode is False,
+        all_stats_table.c.active is True,
+    ).group_by(
+        all_stats_table.c.service_id,
+        all_stats_table.c.name,
+        all_stats_table.c.notification_type,
+        all_stats_table.c.status,
+    ).order_by(
+        all_stats_table.c.name,
+        all_stats_table.c.notification_type,
+        all_stats_table.c.status
+    )
+    return query.all()
+
+
 def fetch_monthly_template_usage_for_service(start_date, end_date, service_id):
     # services_dao.replaces dao_fetch_monthly_historical_usage_by_template_for_service
     stats = db.session.query(

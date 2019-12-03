@@ -260,8 +260,15 @@ def check_for_missing_rows_in_completed_jobs():
 @notify_celery.task(name='check-for-services-with-high-failure-rates-or-sending-to-tv-numbers')
 @statsd(namespace="tasks")
 def check_for_services_with_high_failure_rates_or_sending_to_tv_numbers():
-    services_with_failures = get_services_with_high_failure_rates()
-    # services_sending_to_tv_numbers = dao_find_services_sending_to_tv_numbers(number=100)
+    start_date = (datetime.utcnow() - timedelta(days=1)).date()
+    end_date = datetime.utcnow().date()
+
+    services_with_failures = get_services_with_high_failure_rates(start_date=start_date, end_date=end_date)
+    services_sending_to_tv_numbers = dao_find_services_sending_to_tv_numbers(
+        threshold=100,
+        start_date=start_date,
+        end_date=end_date
+    )
 
     if services_with_failures:
         message = "{} service(s) have had high permanent-failure rates for sms messages in last 24 hours: ".format(
