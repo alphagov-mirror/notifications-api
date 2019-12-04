@@ -291,9 +291,7 @@ def check_for_services_with_high_failure_rates_or_sending_to_tv_numbers():
         current_app.logger.exception(message)
 
         if current_app.config['NOTIFY_ENVIRONMENT'] in ['live', 'production', 'test']:
-            message += """
-            \nThings to do: contact service? revoke their key?
-            """
+            message += "\nThings to do: contact service? revoke their key?"
             zendesk_client.create_ticket(
                 subject="[{}] High failure rates for sms spotted for services".format(
                     current_app.config['NOTIFY_ENVIRONMENT']
