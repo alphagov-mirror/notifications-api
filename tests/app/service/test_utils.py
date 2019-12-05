@@ -1,6 +1,5 @@
 from app.dao.date_util import get_current_financial_year_start_year
 from freezegun import freeze_time
-from collections import namedtuple
 
 
 # see get_financial_year for conversion of financial years.
@@ -14,13 +13,3 @@ def test_get_current_financial_year_start_year_before_march():
 def test_get_current_financial_year_start_year_after_april():
     current_fy = get_current_financial_year_start_year()
     assert current_fy == 2017
-
-
-MockServicesNotificationCounts = namedtuple(
-    'ServicesSendingToTVNumbers',
-    [
-        'service_id',
-        'status',
-        'count',
-    ]
-)
