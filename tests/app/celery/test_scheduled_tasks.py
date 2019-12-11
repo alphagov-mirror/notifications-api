@@ -33,6 +33,7 @@ from app.models import (
 )
 from app.v2.errors import JobIncompleteError
 from tests.app import load_example_csv
+from tests.app.conftest import fake_uuid
 
 from tests.app.db import (
     create_notification,
@@ -516,19 +517,19 @@ MockServicesWithHighFailureRate = namedtuple(
 
 @pytest.mark.parametrize("failure_rates, sms_to_tv_numbers, expected_message", [
     [
-        [MockServicesWithHighFailureRate("123", 0.3)],
+        [MockServicesWithHighFailureRate(fake_uuid, 0.3)],
         [],
         "1 service(s) have had high permanent-failure rates for sms messages in last "
         "24 hours:\nservice: {} failure rate: 0.3,\n".format(
-            Config.ADMIN_BASE_URL + "/services/" + "123"
+            Config.ADMIN_BASE_URL + "/services/" + str(fake_uuid)
         )
     ],
     [
         [],
-        [MockServicesSendingToTVNumbers("123", 300)],
+        [MockServicesSendingToTVNumbers(fake_uuid, 300)],
         "1 service(s) have sent over 100 sms messages to tv numbers in last 24 hours:\n"
         "service: {} count of sms to tv numbers: 300,\n".format(
-            Config.ADMIN_BASE_URL + "/services/" + "123"
+            Config.ADMIN_BASE_URL + "/services/" + str(fake_uuid)
         )
     ]
 ])
