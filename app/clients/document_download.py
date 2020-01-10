@@ -12,13 +12,8 @@ class DocumentDownloadError(Exception):
 
     @classmethod
     def from_exception(cls, e):
-        try:
-            message = e.response.json()['error']
-            status_code = e.response.status_code
-        except (TypeError, ValueError, AttributeError, KeyError):
-            message = 'connection error'
-            status_code = 503
-
+        message = e.response.json()['error']
+        status_code = e.response.status_code
         return cls(message, status_code)
 
 
@@ -45,11 +40,13 @@ class DocumentDownloadClient:
 
             response.raise_for_status()
         except requests.RequestException as e:
-            error = DocumentDownloadError.from_exception(e)
-            current_app.logger.warning(
-                'Document download request failed with error: {}'.format(error.message)
-            )
-
-            raise error
+            if e.response.status_code == 400:
+                error = DocumentDownloadError.from_exception(e)
+                current_app.logger.info(
+                    'Document download request failed with error: {}'.format(error.message)
+                )
+                raise error
+            else:
+                raise Exception(f'Unhandled document download error: {e.response.text}')
 
         return response.json()['document']['url']
