@@ -326,10 +326,11 @@ def test_get_rates_for_billing(notify_db_session):
     create_rate(start_date=datetime.utcnow(), value=33, notification_type='email')
     create_letter_rate(start_date=datetime.utcnow(), rate=0.66, post_class='first')
     create_letter_rate(start_date=datetime.utcnow(), rate=0.33, post_class='second')
+    create_letter_rate(start_date=datetime.utcnow(), rate=1.0, post_class='international')
     non_letter_rates, letter_rates = get_rates_for_billing()
 
     assert len(non_letter_rates) == 3
-    assert len(letter_rates) == 2
+    assert len(letter_rates) == 3
 
 
 @freeze_time('2017-06-01 12:00')
@@ -339,6 +340,7 @@ def test_get_rate(notify_db_session):
     create_rate(start_date=datetime(2017, 5, 30, 23, 0), value=3.3, notification_type='email')
     create_letter_rate(start_date=datetime(2017, 5, 30, 23, 0), rate=0.66, post_class='first')
     create_letter_rate(start_date=datetime(2017, 5, 30, 23, 0), rate=0.3, post_class='second')
+    create_letter_rate(start_date=datetime(2017, 5, 30, 23, 0), rate=0.84, post_class='international')
 
     non_letter_rates, letter_rates = get_rates_for_billing()
     rate = get_rate(non_letter_rates=non_letter_rates, letter_rates=letter_rates, notification_type='sms',
@@ -353,10 +355,16 @@ def test_get_rate(notify_db_session):
     assert letter_rate == Decimal('0.3')
 
 
-@pytest.mark.parametrize("letter_post_class,expected_rate", [("first", "0.61"), ("second", "0.35")])
+@pytest.mark.parametrize("letter_post_class,expected_rate", [
+    ("first", "0.61"),
+    ("second", "0.35"),
+    ("europe", "0.92"),
+    ("rest-of-world", "0.92"),
+])
 def test_get_rate_filters_letters_by_post_class(notify_db_session, letter_post_class, expected_rate):
     create_letter_rate(start_date=datetime(2017, 5, 30, 23, 0), sheet_count=2, rate=0.61, post_class='first')
     create_letter_rate(start_date=datetime(2017, 5, 30, 23, 0), sheet_count=2, rate=0.35, post_class='second')
+    create_letter_rate(start_date=datetime(2017, 5, 30, 23, 0), sheet_count=2, rate=0.92, post_class='international')
 
     non_letter_rates, letter_rates = get_rates_for_billing()
     rate = get_rate(non_letter_rates, letter_rates, "letter", datetime(2018, 10, 1), True, 2, letter_post_class)

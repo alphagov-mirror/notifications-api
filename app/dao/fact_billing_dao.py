@@ -29,6 +29,7 @@ from app.models import (
     NOTIFICATION_STATUS_TYPES_BILLABLE_FOR_LETTERS,
     AnnualBilling,
     Organisation,
+    INTERNATIONAL_POSTAGE_TYPES,
 )
 from app.utils import get_london_midnight_in_utc, get_notification_table_to_use
 
@@ -457,6 +458,10 @@ def get_rate(
     if notification_type == LETTER_TYPE:
         if letter_page_count == 0:
             return 0
+
+        if post_class in INTERNATIONAL_POSTAGE_TYPES:
+            post_class = 'international'
+
         return next(
             r.rate
             for r in letter_rates if (
