@@ -33,8 +33,10 @@ firetext_codes = {
 }
 
 
-def get_firetext_responses(status):
-    return firetext_responses[status]
+def get_firetext_responses(status, code=None):
+    if firetext_codes.get(code, None):
+        return get_message_status_and_reason_from_firetext_code(code)
+    return (firetext_responses[status], None)
 
 
 def get_message_status_and_reason_from_firetext_code(code):
