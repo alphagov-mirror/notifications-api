@@ -38,8 +38,7 @@ def test_process_sms_response_raises_client_exception_for_unknown_status(
 @pytest.mark.parametrize('status, substatus, sms_provider, expected_notification_status, reason', [
     ('0', None, 'Firetext', 'delivered', None),
     ('1', '101', 'Firetext', 'permanent-failure', 'Unknown Subscriber'),
-    ('1', '102', 'Firetext', 'temporary-failure', 'Absent Subscriber'),
-    ('2', None, 'Firetext', 'pending', None),
+    ('2', '102', 'Firetext', 'pending', 'Absent Subscriber'),
     ('2', '1', 'MMG', 'permanent-failure', "Number does not exist"),
     ('3', '2', 'MMG', 'delivered', "Delivered to operator"),
     ('4', '27', 'MMG', 'temporary-failure', "Absent Subscriber"),
@@ -60,7 +59,7 @@ def test_process_sms_client_response_updates_notification_status(
     process_sms_client_response(status, str(sample_notification.id), sms_provider, substatus)
 
     message = f"{sms_provider} callback returned status of {expected_notification_status}: {reason} for reference: {sample_notification.id}"  # noqa
-    mock_logger.assert_called_with(message)
+    mock_logger.assert_any_call(message)
     assert sample_notification.status == expected_notification_status
 
 
