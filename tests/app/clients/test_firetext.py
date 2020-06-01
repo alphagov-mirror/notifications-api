@@ -26,7 +26,7 @@ def test_get_firetext_responses_should_return_correct_details_for_complaint():
     assert get_firetext_responses('2') == ('pending', None)
 
 
-def test_get_firetext_responses_should_be_none_if_unrecognised_status_code():
+def test_get_firetext_responses_raises_KeyError_if_unrecognised_status_code():
     with pytest.raises(KeyError) as e:
         get_firetext_responses('99')
     assert '99' in str(e.value)

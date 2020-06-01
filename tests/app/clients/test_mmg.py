@@ -33,7 +33,7 @@ def test_get_mmg_responses_should_return_correct_details_for_bounced(status, sub
     assert get_mmg_responses(status, substatus) == result
 
 
-def test_get_mmg_responses_should_be_raise_if_unrecognised_status_code():
+def test_get_mmg_responses_raises_KeyError_if_unrecognised_status_code():
     with pytest.raises(KeyError) as e:
         get_mmg_responses('99')
     assert '99' in str(e.value)

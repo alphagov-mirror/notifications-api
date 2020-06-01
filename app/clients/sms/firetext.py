@@ -34,8 +34,8 @@ firetext_codes = {
 
 
 def get_firetext_responses(status, code=None):
-    substatus = firetext_codes[code]['reason'] if firetext_codes.get(code, None) else None
-    return firetext_responses[status], substatus
+    detailed_status = firetext_codes[code]['reason'] if firetext_codes.get(code, None) else None
+    return (firetext_responses[status], detailed_status)
 
 
 def get_message_status_and_reason_from_firetext_code(code):
