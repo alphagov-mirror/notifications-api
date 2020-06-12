@@ -4,7 +4,6 @@ import random
 import string
 import uuid
 
-from celery import current_task
 from flask import _request_ctx_stack, request, g, jsonify, make_response, current_app, has_request_context
 from flask_sqlalchemy import SQLAlchemy as _SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -334,7 +333,7 @@ def setup_sqlalchemy_events(app):
 
     TOTAL_DB_CONNECTIONS = Gauge(
         'db_connection_total_connected',
-        'How many db connections are currently held (potentially idel) by the server',
+        'How many db connections are currently held (potentially idle) by the server',
     )
 
     TOTAL_CHECKED_OUT_DB_CONNECTIONS = Gauge(
@@ -379,17 +378,9 @@ def setup_sqlalchemy_events(app):
                     'host': request.host,
                     'url_rule': request.url_rule.rule if request.url_rule else 'No endpoint'
                 }
-            # celery apps
-            elif current_task:
-                print(current_task)
-                connection_record.info['request_data'] = {
-                    'method': 'celery',
-                    'host': current_app.config['NOTIFY_APP_NAME'],  # worker name
-                    'url_rule': current_task.name,  # task name
-                }
             # anything else. migrations possibly.
             else:
-                current_app.logger.warning('Checked out sqlalchemy connection from outside of request/task')
+                current_app.logger.warning('Checked out sqlalchemy connection from outside of request')
                 connection_record.info['request_data'] = {
                     'method': 'unknown',
                     'host': 'unknown',
