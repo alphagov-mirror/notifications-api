@@ -67,6 +67,11 @@ clients = Clients()
 api_user = LocalProxy(lambda: _request_ctx_stack.top.api_user)
 authenticated_service = LocalProxy(lambda: _request_ctx_stack.top.authenticated_service)
 
+CONCURRENT_REQUESTS = Gauge(
+    'concurrent_web_request_count',
+    'How many concurrent requests are currently being served',
+)
+
 
 def create_app(application):
     from app.config import configs
@@ -261,11 +266,6 @@ def register_v2_blueprints(application):
 
 
 def init_app(app):
-
-    CONCURRENT_REQUESTS = Gauge(
-        'concurrent_web_request_count',
-        'How many concurrent requests are currently being served',
-    )
 
     @app.before_request
     def record_user_agent():
