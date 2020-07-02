@@ -939,7 +939,7 @@ def set_up_usage_data(start_date):
                       notifications_sent=12, billable_unit=5, rate=.65, postage='second')
 
     create_ft_billing(bst_date=two_days_later, template=letter_template_4,
-                      notifications_sent=15, billable_unit=4, rate=.55, postage='second')
+                      notifications_sent=15, billable_unit=4, rate=.55, postage='europe')
 
     create_ft_billing(bst_date=start_date, template=email_template, notifications_sent=10)
 
