@@ -525,6 +525,20 @@ def test_should_not_update_notification_if_research_mode_on_exception(
     assert update_mock.called
 
 
+@pytest.mark.parametrize("starting_status, expected_status", [
+    ("delivered", "delivered"),
+    ("created", "sending"),
+    ("technical-failure", "technical-failure"),
+])
+def test_update_notification_to_sending_does_not_update_status_from_a_final_status(
+    sample_service, notify_db_session, starting_status, expected_status
+):
+    template = create_template(sample_service)
+    notification = create_notification(template=template, status=starting_status)
+    send_to_providers.update_notification_to_sending(notification, "mmg")
+    assert notification.status == expected_status
+
+
 def __update_notification(notification_to_update, research_mode, expected_status):
     if research_mode or notification_to_update.key_type == KEY_TYPE_TEST:
         notification_to_update.status = expected_status
