@@ -387,14 +387,17 @@ def setup_sqlalchemy_events(app):
 
         @event.listens_for(db.engine, 'checkin')
         def checkin(dbapi_connection, connection_record):
-            # connection returned by a web worker
-            TOTAL_CHECKED_OUT_DB_CONNECTIONS.dec()
+            try:
+                # connection returned by a web worker
+                TOTAL_CHECKED_OUT_DB_CONNECTIONS.dec()
 
-            # duration that connection was held by a single web request
-            duration = time.monotonic() - connection_record.info['checkout_at']
+                # duration that connection was held by a single web request
+                duration = time.monotonic() - connection_record.info['checkout_at']
 
-            DB_CONNECTION_OPEN_DURATION_SECONDS.labels(
-                connection_record.info['request_data']['method'],
-                connection_record.info['request_data']['host'],
-                connection_record.info['request_data']['url_rule']
-            ).observe(duration)
+                DB_CONNECTION_OPEN_DURATION_SECONDS.labels(
+                    connection_record.info['request_data']['method'],
+                    connection_record.info['request_data']['host'],
+                    connection_record.info['request_data']['url_rule']
+                ).observe(duration)
+            except Exception:
+                current_app.logger.exception("Exception caught for checkin event.")
