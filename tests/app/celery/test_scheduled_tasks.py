@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta
 from unittest.mock import call
 
@@ -555,3 +556,25 @@ def test_check_for_services_with_high_failure_rates_or_sending_to_tv_numbers(
         subject="[test] High failure rates for sms spotted for services",
         ticket_type='incident'
     )
+
+
+def test_cbc_proxy_canary_invokes_cbc_proxy_client(
+    mocker,
+):
+    mock_send_canary = mocker.patch(
+        'app.cbc_proxy_client.send_canary',
+    )
+
+    scheduled_tasks.cbc_proxy_canary()
+
+    mock_send_canary.assert_called_once_with(
+        identifier=mocker.ANY,
+    )
+
+    kwargs = mock_send_canary.invoke.mock_calls[0][-1]
+    identifier = kwargs['identifier']
+
+    try:
+        uuid.UUID(identifier)
+    except BaseException:
+        pytest.fail(f"{identifier} is not a valid uuid")
