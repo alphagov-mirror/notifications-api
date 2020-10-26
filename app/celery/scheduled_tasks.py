@@ -1,3 +1,5 @@
+import uuid
+
 from datetime import (
     datetime,
     timedelta
@@ -294,6 +296,6 @@ def check_for_services_with_high_failure_rates_or_sending_to_tv_numbers():
 
 
 @notify_celery.task(name='cbc-proxy-canary')
-@statsd(namespace="tasks")
 def cbc_proxy_canary():
-    pass
+    identifier = str(uuid.uuid4())
+    cbc_proxy_client.send_canary(identifier)

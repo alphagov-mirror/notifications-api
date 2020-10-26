@@ -567,12 +567,9 @@ def test_cbc_proxy_canary_invokes_cbc_proxy_client(
 
     scheduled_tasks.cbc_proxy_canary()
 
-    mock_send_canary.assert_called_once_with(
-        identifier=mocker.ANY,
-    )
-
-    kwargs = mock_send_canary.invoke.mock_calls[0][-1]
-    identifier = kwargs['identifier']
+    mock_send_canary.assert_called
+    # the 0th argument of the call to send_canary
+    identifier = mock_send_canary.mock_calls[0][1][0]
 
     try:
         uuid.UUID(identifier)
