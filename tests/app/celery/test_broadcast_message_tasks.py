@@ -166,6 +166,48 @@ def test_send_broadcast_provider_message_sends_data_correctly(
 
 
 @freeze_time('2020-08-01 12:00')
+def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, sample_service):
+    template = create_template(sample_service, BROADCAST_TYPE)
+    broadcast_message = create_broadcast_message(
+        template,
+        areas={'areas': [], 'simple_polygons': [],},
+        status=BroadcastStatusType.BROADCASTING
+    )
+    event = create_broadcast_event(broadcast_message)
+
+    # an existing provider message already exists, and previously failed
+    existing_provider_message = create_broadcast_provider_message(
+        broadcast_event=event,
+        provider='ee',
+        status=BroadcastProviderMessageStatus.TECHNICAL_FAILURE
+    )
+
+    mock_create_broadcast = mocker.patch(
+        f'app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast',
+    )
+
+    send_broadcast_provider_message(provider='ee', broadcast_event_id=str(event.id))
+
+    # make sure we haven't completed a duplicate event - we shouldn't record the failure
+    assert len(event.provider_messages) == 1
+
+    broadcast_provider_message = event.get_provider_message('ee')
+    # TODO: Should be ACK
+    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.TECHNICAL_FAILURE
+    assert broadcast_provider_message.updated_at is not None
+
+    mock_create_broadcast.assert_called_once_with(
+        identifier=str(broadcast_provider_message.id),
+        message_number=mocker.ANY,
+        headline='GOV.UK Notify Broadcast',
+        description='this is an emergency broadcast message',
+        areas=[],
+        sent=event.sent_at_as_cap_datetime_string,
+        expires=event.transmitted_finishes_at_as_cap_datetime_string,
+    )
+
+
+@freeze_time('2020-08-01 12:00')
 def test_send_broadcast_provider_message_sends_data_correctly_when_broadcast_message_has_no_template(
     mocker, sample_service,
 ):
