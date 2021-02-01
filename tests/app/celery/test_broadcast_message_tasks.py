@@ -3,7 +3,7 @@ from datetime import datetime
 from unittest.mock import call, ANY
 
 from freezegun import freeze_time
-from celery.exceptions import MaxRetriesExceededError
+from celery.exceptions import MaxRetriesExceededError, Retry
 import pytest
 
 from app.models import (
@@ -144,7 +144,7 @@ def test_send_broadcast_provider_message_sends_data_correctly(
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(event.id))
 
     broadcast_provider_message = event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
+    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
 
     mock_create_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -192,8 +192,8 @@ def test_send_broadcast_provider_message_works_if_we_retried_previously(mocker, 
     assert len(event.provider_messages) == 1
 
     broadcast_provider_message = event.get_provider_message('ee')
-    # TODO: Should be ACK
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.TECHNICAL_FAILURE
+
+    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
     assert broadcast_provider_message.updated_at is not None
 
     mock_create_broadcast.assert_called_once_with(
@@ -276,7 +276,7 @@ def test_send_broadcast_provider_message_sends_update_with_references(
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(update_event.id))
 
     broadcast_provider_message = update_event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
+    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
 
     mock_update_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -328,7 +328,7 @@ def test_send_broadcast_provider_message_sends_cancel_with_references(
     send_broadcast_provider_message(provider=provider, broadcast_event_id=str(cancel_event.id))
 
     broadcast_provider_message = cancel_event.get_provider_message(provider)
-    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.SENDING
+    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.ACK
 
     mock_cancel_broadcast.assert_called_once_with(
         identifier=str(broadcast_provider_message.id),
@@ -361,9 +361,13 @@ def test_send_broadcast_provider_message_errors(mocker, sample_service):
         'app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast',
         side_effect=CBCProxyRetryableException('oh no'),
     )
-    mock_retry = mocker.patch('app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry')
+    mock_retry = mocker.patch(
+        'app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry',
+        side_effect=Retry
+    )
 
-    send_broadcast_provider_message(provider='ee', broadcast_event_id=str(event.id))
+    with pytest.raises(Retry):
+        send_broadcast_provider_message(provider='ee', broadcast_event_id=str(event.id))
 
     mock_create_broadcast.assert_called_once_with(
         identifier=ANY,
@@ -385,6 +389,9 @@ def test_send_broadcast_provider_message_errors(mocker, sample_service):
         exc=mock_create_broadcast.side_effect,
         queue='broadcast-tasks'
     )
+    broadcast_provider_message = event.get_provider_message('ee')
+    assert broadcast_provider_message.status == BroadcastProviderMessageStatus.TECHNICAL_FAILURE
+
 
 
 @pytest.mark.parametrize('num_retries, expected_countdown', [
@@ -407,13 +414,17 @@ def test_send_broadcast_provider_message_delays_retry_exponentially(
         'app.clients.cbc_proxy.CBCProxyEE.create_and_send_broadcast',
         side_effect=CBCProxyRetryableException('oh no'),
     )
-    mock_retry = mocker.patch('app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry')
+    mock_retry = mocker.patch(
+        'app.celery.broadcast_message_tasks.send_broadcast_provider_message.retry',
+        side_effect=Retry
+    )
 
     # patch celery request context as shown here: https://stackoverflow.com/a/59870468
     mock_celery_task_request_context = mocker.patch("celery.app.task.Task.request")
     mock_celery_task_request_context.retries = num_retries
 
-    send_broadcast_provider_message(provider='ee', broadcast_event_id=str(event.id))
+    with pytest.raises(Retry):
+        send_broadcast_provider_message(provider='ee', broadcast_event_id=str(event.id))
 
     mock_create_broadcast.assert_called_once_with(
         identifier=ANY,
